@@ -1,0 +1,49 @@
+{
+  "lastRequest": 5,
+  "requests": [
+    {
+      "id": "0002",
+      "userId": "151885027498655745",
+      "username": "mob.mind",
+      "type": "Find an Item",
+      "item": "shiny buns",
+      "link": "none",
+      "notes": "none",
+      "status": "Cancelled",
+      "created": "2026-07-26T06:38:07.053Z"
+    },
+    {
+      "id": "0003",
+      "userId": "151885027498655745",
+      "username": "mob.mind",
+      "type": "Test Request",
+      "item": "Test Item",
+      "link": "https://example.com",
+      "notes": "Test request",
+      "status": "Cancelled",
+      "created": "2026-07-26T06:42:40.756Z"
+    },
+    {
+      "id": "0004",
+      "userId": "151885027498655745",
+      "username": "mob.mind",
+      "type": "Find an Item",
+      "item": "miku",
+      "link": "none",
+      "notes": "none",
+      "status": "Cancelled",
+      "created": "2026-07-27T00:11:41.750Z"
+    },
+    {
+      "id": "0005",
+      "userId": "151885027498655745",
+      "username": "mob.mind",
+      "type": "Test Request",
+      "item": "Test Item",
+      "link": "https://example.com",
+      "notes": "Test request",
+      "status": "Pending",
+      "created": "2026-07-27T08:08:05.765Z"
+    }
+  ]
+}
