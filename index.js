@@ -16,6 +16,8 @@ const {
 
 const {
     createRequest,
+    getRequest,
+    updateRequest,
     cancelRequest,
     getAllRequests,
     clearRequests
@@ -256,7 +258,77 @@ ${request.status}
     }
 
 
+// =========================
+// UPDATE REQUEST
+// =========================
 
+if (message.content.startsWith("!update")) {
+
+
+    const args = message.content.split(" ");
+
+    const requestID = args[1];
+
+
+    if (!requestID) {
+
+        return message.reply(
+            "❌ Example: !update 0001"
+        );
+
+    }
+
+
+
+    const request = getRequest(requestID);
+
+
+
+    if (!request) {
+
+        return message.reply(
+            "❌ Request not found."
+        );
+
+    }
+
+
+
+    if (request.userId !== message.author.id) {
+
+        return message.reply(
+            "❌ You can only update your own requests."
+        );
+
+    }
+
+
+
+    activeUpdates.set(
+        message.author.id,
+        {
+            id: requestID,
+            step: "choice"
+        }
+    );
+
+
+
+    return message.reply(
+`✏️ **Updating Mobtains Request #${requestID}**
+
+What would you like to update?
+
+1️⃣ Item
+2️⃣ Link
+3️⃣ Notes
+4️⃣ Add Photos
+
+Reply with:
+1, 2, 3, or 4`
+    );
+
+}
 
 
     // =========================
@@ -413,14 +485,223 @@ How can Mobtains help you?`,
     if (!message.guild) {
 
 
-        const request =
-            activeRequests.get(
+    // =========================
+    // REQUEST UPDATE FLOW
+    // =========================
+
+    const update =
+        activeUpdates.get(
+            message.author.id
+        );
+
+
+    if (update) {
+
+
+        const requestID = update.id;
+
+
+
+        if (update.step === "choice") {
+
+
+            if (message.content === "1") {
+
+                update.step = "item";
+
+                activeUpdates.set(
+                    message.author.id,
+                    update
+                );
+
+                return message.reply(
+                    "📦 Send the new item information."
+                );
+
+            }
+
+
+
+            if (message.content === "2") {
+
+                update.step = "link";
+
+                activeUpdates.set(
+                    message.author.id,
+                    update
+                );
+
+                return message.reply(
+                    "🔗 Send the new link."
+                );
+
+            }
+
+
+
+            if (message.content === "3") {
+
+                update.step = "notes";
+
+                activeUpdates.set(
+                    message.author.id,
+                    update
+                );
+
+                return message.reply(
+                    "📝 Send the new notes."
+                );
+
+            }
+
+
+
+            if (message.content === "4") {
+
+                update.step = "photos";
+
+                activeUpdates.set(
+                    message.author.id,
+                    update
+                );
+
+                return message.reply(
+                    "📸 Send the new photos."
+                );
+
+            }
+
+
+            return message.reply(
+                "❌ Please reply with 1, 2, 3, or 4."
+            );
+
+        }
+
+
+
+        if (
+            update.step === "item" ||
+            update.step === "link" ||
+            update.step === "notes"
+        ) {
+
+
+            const changes = {};
+
+            changes[update.step] =
+                message.content;
+
+
+
+            updateRequest(
+                requestID,
+                changes
+            );
+
+
+            activeUpdates.delete(
                 message.author.id
             );
 
 
-        if (!request) return;
+            return message.reply(
+                `✅ Request #${requestID} updated!`
+            );
 
+        }
+
+
+
+        if (update.step === "photos") {
+
+
+            if (message.attachments.size === 0) {
+
+                return message.reply(
+                    "❌ Please attach at least one photo."
+                );
+
+            }
+
+
+            const images =
+                [...message.attachments.values()]
+                .map(
+                    attachment => attachment.url
+                );
+
+
+
+            const existing =
+                getRequest(requestID);
+
+
+
+            updateRequest(
+                requestID,
+                {
+                    images: [
+                        ...(existing.images || []),
+                        ...images
+                    ]
+                }
+            );
+
+
+            const adminChannel =
+                await client.channels.fetch(
+                    process.env.ADMIN_CHANNEL_ID
+                );
+
+
+            await adminChannel.send({
+
+                content:
+`🔄 **REQUEST UPDATED**
+
+Request:
+#${requestID}
+
+Customer:
+${message.author}
+
+Change:
+📸 Added new photos`,
+
+                files: images
+
+            });
+
+
+
+            activeUpdates.delete(
+                message.author.id
+            );
+
+
+            return message.reply(
+                `✅ Photos added to request #${requestID}!`
+            );
+
+        }
+
+    }
+
+
+
+
+    // =========================
+    // NEW REQUEST FLOW
+    // =========================
+
+    const request =
+        activeRequests.get(
+            message.author.id
+        );
+
+
+    if (!request) return;
 
 
         // ITEM STEP
