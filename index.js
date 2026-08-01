@@ -10,7 +10,8 @@ const {
     GatewayIntentBits,
     ButtonBuilder,
     ButtonStyle,
-    ActionRowBuilder
+    ActionRowBuilder,
+    Partials
 } = require("discord.js");
 
 const {
@@ -26,8 +27,12 @@ const client = new Client({
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages
+    ],
+    partials: [
+        Partials.Channel
     ]
 });
+
 
 // Active DM requests
 const activeRequests = new Map();
@@ -45,6 +50,7 @@ client.once("clientReady", () => {
 client.on("messageCreate", async (message) => {
 
     if (message.author.bot) return;
+
 
 
     // =========================
@@ -72,6 +78,9 @@ client.on("messageCreate", async (message) => {
     }
 
 
+
+
+
     // =========================
     // CLEAR REQUESTS (ADMIN ONLY)
     // =========================
@@ -79,8 +88,7 @@ client.on("messageCreate", async (message) => {
     if (message.content.toLowerCase() === "!clearrequests") {
 
         if (
-            message.channel.id !==
-            process.env.ADMIN_CHANNEL_ID
+            message.channel.id !== process.env.ADMIN_CHANNEL_ID
         ) {
 
             return message.reply(
@@ -100,14 +108,6 @@ client.on("messageCreate", async (message) => {
     }
 
 
-
-    // =========================
-    // TEST REQUEST
-    // =========================
-
-
-
-    if (message.author.bot) return;
 
 
 
@@ -131,9 +131,10 @@ client.on("messageCreate", async (message) => {
             });
 
 
-            const adminChannel = await client.channels.fetch(
-                process.env.ADMIN_CHANNEL_ID
-            );
+            const adminChannel =
+                await client.channels.fetch(
+                    process.env.ADMIN_CHANNEL_ID
+                );
 
 
             await adminChannel.send(
@@ -184,13 +185,11 @@ Status:
     // VIEW REQUESTS (ADMIN ONLY)
     // =========================
 
-
     if (message.content === "!requests") {
 
 
         if (
-            message.channel.id !==
-            process.env.ADMIN_CHANNEL_ID
+            message.channel.id !== process.env.ADMIN_CHANNEL_ID
         ) {
 
             return message.reply(
@@ -264,7 +263,6 @@ ${request.status}
     // CANCEL REQUEST
     // =========================
 
-
     if (message.content.startsWith("!cancel")) {
 
 
@@ -332,20 +330,15 @@ Status:
 
     }
 
-
-
-
-
-    // =========================
+        // =========================
     // START REQUEST
     // =========================
 
-
     if (message.content === "!request") {
 
-    if (!isRequestWindowOpen()) {
+        if (!isRequestWindowOpen()) {
 
-        return message.reply(
+            return message.reply(
 `⏳ **Mobtains requests are currently CLOSED**
 
 Our monthly Side Quest window is only open during the **first 7 days of each month**.
@@ -357,9 +350,9 @@ Our monthly Side Quest window is only open during the **first 7 days of each mon
 12:00 AM Eastern on the 8th
 
 Use \`!window\` anytime to check the current status.`
-        );
+            );
 
-    }
+        }
 
 
         const findItem = new ButtonBuilder()
@@ -368,12 +361,10 @@ Use \`!window\` anytime to check the current status.`
             .setStyle(ButtonStyle.Primary);
 
 
-
         const helpHunt = new ButtonBuilder()
             .setCustomId("help_hunt")
             .setLabel("🔎 Help Me Hunt")
             .setStyle(ButtonStyle.Secondary);
-
 
 
         const other = new ButtonBuilder()
@@ -405,7 +396,7 @@ How can Mobtains help you?`,
 
 
 
-        await message.reply(
+        return message.reply(
             "📩 Check your DMs!"
         );
 
@@ -419,7 +410,6 @@ How can Mobtains help you?`,
     // DM REQUEST FLOW
     // =========================
 
-
     if (!message.guild) {
 
 
@@ -429,15 +419,30 @@ How can Mobtains help you?`,
             );
 
 
-
         if (!request) return;
 
 
 
+        // ITEM STEP
+
         if (request.step === "item") {
 
 
-            request.item = message.content;
+            request.item =
+                message.content || "Image submission";
+
+
+            if (message.attachments.size > 0) {
+
+                request.images.push(
+                    ...message.attachments.map(
+                        attachment => attachment.url
+                    )
+                );
+
+            }
+
+
 
             request.step = "link";
 
@@ -453,6 +458,8 @@ How can Mobtains help you?`,
 
 📦 ${request.item}
 
+${request.images.length > 0 ? "📸 Images received!" : ""}
+
 Do you have a link?
 
 Send the link or type:
@@ -465,10 +472,14 @@ none`
 
 
 
+        // LINK STEP
+
         if (request.step === "link") {
 
 
-            request.link = message.content;
+            request.link =
+                message.content || "none";
+
 
             request.step = "notes";
 
@@ -494,26 +505,44 @@ none`
 
 
 
+        // NOTES STEP
+
         if (request.step === "notes") {
 
 
-            request.notes = message.content;
+            request.notes =
+                message.content || "none";
 
 
 
             try {
 
 
-                const requestNumber = createRequest({
+                const requestNumber =
+                    createRequest({
 
-                    userId: message.author.id,
-                    username: message.author.tag,
-                    type: request.type,
-                    item: request.item,
-                    link: request.link,
-                    notes: request.notes
+                        userId:
+                            message.author.id,
 
-                });
+                        username:
+                            message.author.tag,
+
+                        type:
+                            request.type,
+
+                        item:
+                            request.item,
+
+                        link:
+                            request.link,
+
+                        notes:
+                            request.notes,
+
+                        images:
+                            request.images
+
+                    });
 
 
 
@@ -524,7 +553,9 @@ none`
 
 
 
-                await adminChannel.send(
+                await adminChannel.send({
+
+content:
 `🚨 **NEW MOBTAINS SIDE QUEST** 🚨
 
 Request Verification Number:
@@ -545,9 +576,16 @@ ${request.link}
 Notes:
 ${request.notes}
 
+Images:
+${request.images.length > 0 ? "📸 Attached below" : "None"}
+
 Status:
-🟡 Pending`
-                );
+🟡 Pending`,
+
+files:
+    request.images || []
+
+                });
 
 
 
@@ -597,7 +635,6 @@ Verification Number:
 // BUTTON HANDLER
 // =========================
 
-
 client.on("interactionCreate", async (interaction) => {
 
 
@@ -612,13 +649,14 @@ client.on("interactionCreate", async (interaction) => {
             interaction.user.id,
             {
                 step: "item",
-                type: "Find an Item"
+                type: "Find an Item",
+                images: []
             }
         );
 
 
         return interaction.reply(
-            "🛒 What item are you looking for?"
+            "🛒 What item are you looking for?\n\nYou can send pictures too!"
         );
 
     }
@@ -634,13 +672,14 @@ client.on("interactionCreate", async (interaction) => {
             interaction.user.id,
             {
                 step: "item",
-                type: "Help Me Hunt"
+                type: "Help Me Hunt",
+                images: []
             }
         );
 
 
         return interaction.reply(
-            "🔎 What item are you hunting for?"
+            "🔎 What item are you hunting for?\n\nYou can send pictures too!"
         );
 
     }
@@ -656,18 +695,20 @@ client.on("interactionCreate", async (interaction) => {
             interaction.user.id,
             {
                 step: "item",
-                type: "Other"
+                type: "Other",
+                images: []
             }
         );
 
 
         return interaction.reply(
-            "📦 Tell Mobtains how we can help."
+            "📦 Tell Mobtains how we can help.\n\nYou can send pictures too!"
         );
 
     }
 
 });
+
 
 
 
